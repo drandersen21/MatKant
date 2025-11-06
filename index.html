@@ -46,73 +46,75 @@
 </head>
 <body>
 
-  <h2>Kommende torsdagsmenuer – Matematisk Kantine</h2>
-  <div id="menu">Indlæser...</div>
+<h2>Kommende torsdagsmenuer</h2>
+<div id="menu">Indlæser...</div>
 
-  <script>
-    async function hentTorsdage() {
-      const proxyUrl = "https://corsproxy.io/?" + encodeURIComponent("https://www.matkant.dk/data/m/d");
+<script>
+async function hentTorsdage() {
+  const proxyUrl = "https://api.allorigins.win/get?url=" + encodeURIComponent("https://www.matkant.dk/data/m/d");
 
-      try {
-        const res = await fetch(proxyUrl);
-        const data = await res.json(); // corsproxy.io returnerer direkte JSON
+  try {
+    const res = await fetch(proxyUrl);
+    const textData = await res.json();
+    const data = JSON.parse(textData.contents);
 
-        // Filtrér kun torsdage
-        let torsdage = data
-          .filter(d => d.header && d.header.toLowerCase().includes("torsdag"))
-          .map(d => ({ ...d, date: parseDanishDate(d.header) }))
-          .filter(d => d.date);
+    // Filtrér kun torsdage
+    let torsdage = data
+      .filter(d => d.header && d.header.toLowerCase().includes("torsdag"))
+      .map(d => ({ ...d, date: parseDanishDate(d.header) }))
+      .filter(d => d.date);
 
-        // Sortér efter dato
-        torsdage.sort((a, b) => a.date - b.date);
+    // Sortér efter dato
+    torsdage.sort((a, b) => a.date - b.date);
 
-        // Kun torsdage i dag og frem
-        const nu = new Date();
-        torsdage = torsdage.filter(d => d.date >= new Date(nu.getFullYear(), nu.getMonth(), nu.getDate()));
+    const nu = new Date();
+    torsdage = torsdage.filter(d => d.date >= new Date(nu.getFullYear(), nu.getMonth(), nu.getDate()));
 
-        if (torsdage.length === 0) {
-          document.getElementById("menu").textContent = "Ingen kommende torsdagsmenuer fundet.";
-          return;
-        }
-
-        let html = "";
-        torsdage.forEach(day => {
-          html += `<div class="day"><h3>${day.header}</h3>`;
-          html += `<table>`;
-          (day.menu || []).forEach(ret => {
-            // Fjern linjer med "Salatbar..." og "- tillæg på vægtprisen"
-            if (ret.name.toLowerCase().includes("salatbar") || ret.name.toLowerCase().includes("tillæg på vægtprisen")) return;
-            html += `<tr><td>${ret.name}</td><td class="price">${ret.price ? ret.price + " kr." : ""}</td></tr>`;
-          });
-          html += `</table>`;
-          html += `</div>`;
-        });
-
-        document.getElementById("menu").innerHTML = html;
-      } catch (err) {
-        console.error(err);
-        document.getElementById("menu").textContent = "Kunne ikke hente menuen.";
-      }
+    if (torsdage.length === 0) {
+      document.getElementById("menu").textContent = "Ingen kommende torsdagsmenuer fundet.";
+      return;
     }
 
-    function parseDanishDate(header) {
-      const match = header.match(/(\d{1,2})\.\s*(\w+)/i);
-      if (!match) return null;
-      const day = parseInt(match[1]);
-      const monthName = match[2].toLowerCase();
-      const months = {
-        januar: 0, februar: 1, marts: 2, april: 3, maj: 4, juni: 5,
-        juli: 6, august: 7, september: 8, oktober: 9, november: 10, december: 11
-      };
-      const month = months[monthName];
-      const year = new Date().getFullYear();
-      const date = new Date(year, month, day);
-      if (date < new Date() && month < new Date().getMonth()) date.setFullYear(year + 1);
-      return date;
-    }
+    let html = "";
+    torsdage.forEach(day => {
+      html += `<div class="day"><h3>${day.header}</h3>`;
+      
+      html += `<table>`;
+      (day.menu || []).forEach(ret => {
+        // Fjern kun "tillæg på vægtprisen ..." fra visning, behold resten af navnet
+        let navn = ret.name.replace(/- tillæg på vægtprisen.*$/i, "").trim();
 
-    hentTorsdage();
-  </script>
+        html += `<tr><td>${navn}</td><td class="price">${ret.price && !ret.name.toLowerCase().includes("tillæg på vægtprisen") ? ret.price + " kr." : ""}</td></tr>`;
+      });
+      html += `</table>`;
+      html += `</div>`;
+    });
+
+    document.getElementById("menu").innerHTML = html;
+  } catch (err) {
+    console.error(err);
+    document.getElementById("menu").textContent = "Kunne ikke hente menuen.";
+  }
+}
+
+function parseDanishDate(header) {
+  const match = header.match(/(\d{1,2})\.\s*(\w+)/i);
+  if (!match) return null;
+  const day = parseInt(match[1]);
+  const monthName = match[2].toLowerCase();
+  const months = {
+    januar: 0, februar: 1, marts: 2, april: 3, maj: 4, juni: 5,
+    juli: 6, august: 7, september: 8, oktober: 9, november: 10, december: 11
+  };
+  const month = months[monthName];
+  const year = new Date().getFullYear();
+  const date = new Date(year, month, day);
+  if (date < new Date() && month < new Date().getMonth()) date.setFullYear(year + 1);
+  return date;
+}
+
+hentTorsdage();
+</script>
 
 </body>
 </html>
